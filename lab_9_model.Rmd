@@ -14,7 +14,6 @@ output:
 
 ```{r setup, message=FALSE}
 library(tidyverse)  # data manipulation
-library(janitor)    # for `clean_names()` function
 library(knitr)      # pretty formatted tables
 library(skimr)      # descriptive summaries
 library(patchwork)  # organize plots

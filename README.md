@@ -56,7 +56,6 @@ With our theoretical aim in mind we will want to prepare, assess, interrogate, e
 3. Delete all the material below the front matter.
 4. Add a code chunk directly below the header named 'setup' and add the code to load the following packages and any others you end up using in this lab report. Add `message=FALSE` to this code chunk to suppress messages. 
   - tidyverse
-  - janitor
   - knitr
   - skimr
   - patchwork
