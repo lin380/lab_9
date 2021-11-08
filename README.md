@@ -163,5 +163,6 @@ Some questions to consider:
 ## References
 
 Holmes, J. (1990). Hedges and boosters in women’s and men’s speech. Language & Communication, 10(3), 185–205. https://doi.org/10.1016/0271-5309(90)90002-S
+
 Lakoff, R. (1973). Language and Woman’s Place. Language in Society, 2(1), 45–80.
 
