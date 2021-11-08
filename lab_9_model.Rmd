@@ -53,7 +53,7 @@ Examples of hedges:
 
 In the Switchboard Dialogue Act Corpus hedges are marked in the DAMSL tag annotation as `h` (hedge), `h^r` (repeated hedge), or `h^t` (hedge when talking about the task). 
 
-The findings from an Ordinary Least Squares Regression analysis using a log-transformed and normalized count of hedge use per speaker found that there are no difference between men and women's usage of hedges given the data in the Switchboard Dialogue Act Corpus. The age of the participants, used as a control variable, however, is found to be significant, although the effect size is small. 
+The findings from an Ordinary Least Squares Regression analysis using a log-transformed and normalized count of hedge use per speaker found that there are no difference between men and women's usage of hedges given the data in the Switchboard Dialogue Act Corpus, supporting Holmes' (1990) and arguing against Lakoff (1973. The age of the participants, used as a control variable, however, is found to be significant, although the effect size is small. 
 
 # Tasks
 

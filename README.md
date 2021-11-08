@@ -30,7 +30,7 @@ $H_0$: Women do not use more hedges than men.
 
 Background information for the analysis: 
 
-Lakoff (1973) argues that women express themselves tentatively without warrant or justification more often than men. This suggestion would predict that women will use more hedges than men. What is a hedge? A hedge is used to diminish the confidence or certainty with which the speaker makes a statement or answers a question.
+Lakoff (1973) argues that women express themselves tentatively without warrant or justification more often than men. This suggestion would predict that women will use more hedges than men. Holmes (1990) argues against this notion. What is a hedge? A hedge is used to diminish the confidence or certainty with which the speaker makes a statement or answers a question.
 
 Examples of hedges: 
 
