@@ -1,0 +1,8 @@
+variable_name,name,description
+doc_id,Document ID,ID for each conversation document
+damsl_tag,DAMSL tag,DAMSL dialogue act annotation labels
+speaker,Speaker label,Label for each speaker in the conversation
+turn_num,Number of turns,Number of continguous uttterance turns for a given speaker
+utterance_num,Number of utterances,The cumulative number of utterances in the conversation
+utterance_text,Utterance text,The actual dialogue utterance. Includes disfluency annotation. 
+speaker_id,Speaker ID,ID for each speaker

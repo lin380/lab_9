@@ -1,0 +1,6 @@
+variable_name,name,description
+speaker_id,Speaker ID,ID for each speaker
+damsl_tag,DAMSL tag,DAMSL dialogue act annotation labels
+utterance_text,Utterance text,The actual dialogue utterance including inline disfluency annotation
+sex,Sex,The biological sex of each speaker
+age,Age,The age of the speaker at the time of the recording (1992)

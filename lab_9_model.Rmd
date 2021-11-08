@@ -1,0 +1,291 @@
+---
+title: 'Lab #9 (model)'
+author: "Jerid Francom"
+date: "11/5/2021"
+output: 
+  pdf_document: 
+    toc: yes
+    number_sections: yes
+    latex_engine: xelatex
+  html_document: 
+    toc: yes
+    number_sections: yes
+---
+
+```{r setup, message=FALSE}
+library(tidyverse)  # data manipulation
+library(janitor)    # for `clean_names()` function
+library(knitr)      # pretty formatted tables
+library(skimr)      # descriptive summaries
+library(patchwork)  # organize plots
+library(effectsize) # calculate confidence and generate effect size
+library(report)     # create boilerplate statistical reporting
+
+source("functions/functions.R") # print_pretty_table()
+```
+
+# Overview
+
+The aim of this script will be use the transformed Switchboard Dialogue Act Corpus dataset to analyze a the following alternative hypothesis: 
+
+$H_1$: Women use more hedges than men. 
+
+Then, the null hypothesis is: 
+
+$H_0$: Women do not use more hedges than men.
+
+
+Background information for the analysis: 
+
+Lakoff (1973) argues that women express themselves tentatively without warrant or justification more often than men. This suggestion would predict that women will use more hedges than men. What is a hedge? A hedge is used to diminish the confidence or certainty with which the speaker makes a statement or answers a question.
+
+Examples of hedges: 
+
+(1) General example: 
+
+- *I don't know if I'm making any sense or not.*
+
+
+(2) In context from the Switchboard Dialogue Act Corpus:
+
+- You might try,                                           
+- *I don't know,*                                                  
+- hold it down a little longer,
+
+In the Switchboard Dialogue Act Corpus hedges are marked in the DAMSL tag annotation as `h` (hedge), `h^r` (repeated hedge), or `h^t` (hedge when talking about the task). 
+
+The findings from an Ordinary Least Squares Regression analysis using a log-transformed and normalized count of hedge use per speaker found that there are no difference between men and women's usage of hedges given the data in the Switchboard Dialogue Act Corpus. The age of the participants, used as a control variable, however, is found to be significant, although the effect size is small. 
+
+# Tasks
+
+## Orientation
+
+Read in the dataset and the data dictionary.
+
+```{r sdac-read, message=FALSE}
+sdac <- read_csv(file = "data/derived/sdac_transformed.csv") # read transformed sdac dataset
+sdac_data_dictionary <- read_csv(file = "data/derived/sdac_transformed_data_dictionary.csv") # read transformed sdac data dictionary
+```
+
+```{r sdac-preview-dataset}
+glimpse(sdac) # preview dataset structure
+```
+
+The `sdac` dataset has 223,606 observations and 5 variables.
+
+```{r sdac-view-data-dictionary, echo=FALSE}
+sdac_data_dictionary %>% # dataset
+  print_pretty_table(caption = "SDAC dataset data dictionary.")
+```
+The data dictionary shows that the DAMSL tag information is contained in the `damsl_tag` column. The variables `sex` and `age` are included in this dataset. Although `sex` is the primary variable of interest, `age` will be used as a control factor to account for potential variability which may be due to the age of the speaker participants.
+
+
+## Preparation
+
+Count the number of hedges. Include 'h', 'h^r', or 'h^t'. Use the `str_count()` function on the `damsl_tag` column and count the matches to the regular expression `"^h(\\^r|\\^t)?`. Create a new column with the match counts to `hedges`. 
+
+```{r sdac-count-hedges}
+sdac_hedges <- 
+  sdac %>% # dataset
+  mutate(hedges = str_count(damsl_tag, "^h(\\^r|\\^t)?")) # count hedges
+```
+
+Sum and normalize the number of hedges used by each speaker. Group the data by `speaker_id`, `sex`, and `age` and then use `sum()` to sum the `hedges` and divide by the number of utterances per speaker (`n()`). Multiple the result by $1000$ to get a number of hedges per 1000 utterances score. Remember to `ungroup()` the result to leave the data frame without grouping parameters.
+
+```{r sdac-relative-counts-hedges, message=FALSE}
+sdac_hedges <- 
+  sdac_hedges %>% # dataset
+  group_by(speaker_id, sex, age) %>% # grouping parameters
+  summarize(hedges_per_utt = (sum(hedges)/ n()) * 1000) %>%  # sum hedges and normalized per number of utterances per speaker
+  ungroup() # remove grouping parameters
+```
+
+Preview the result. 
+
+```{r}
+sdac_hedges %>% 
+  print_pretty_table(caption = "First 10 observations of prepared `sdac_hedges` data frame.")
+```
+
+There is one incomplete case, 155. Remove the one incomplete case using `filter()`. 
+
+```{r sdac-remove-incomplete-case}
+sdac_hedges <- 
+  sdac_hedges %>% # dataset
+  filter(speaker_id != 155) # remove speaker_id 155
+```
+
+The last step to prepare the dataset for analysis is to convert the categorical variables to factors. Neither need levels or new labels, so I will just use the `factor()` function and overwrite the current variable.
+
+```{r sdac-convert-categorical-to-factor}
+sdac_hedges <- 
+  sdac_hedges %>% # dataset
+  mutate(speaker_id = factor(speaker_id)) %>% # convert to factor
+  mutate(sex = factor(sex)) # convert to factor
+
+glimpse(sdac_hedges) # preview the data structure
+```
+
+
+## Descriptive assessment
+
+Now we are ready to do the descriptive assessment for our analysis. Let's first look at each of the variables separately --that is, as a univariate description.
+
+```{r sdac-uni-cat}
+sdac_hedges %>% 
+  select(-speaker_id) %>% # deselect speaker_id
+  skim() %>% # get data summary
+  yank("factor") # only show factor-oriented information
+```
+
+The factor `sex` has 234 males and 206 females. 
+
+```{r sdac-uni-num}
+num_skim <- skim_with(numeric = sfl(iqr = IQR)) # add IQR to skim
+
+sdac_hedges %>% # dataset
+  num_skim() %>% # get custom data summary
+  yank("numeric") # only show numeric-oriented information
+```
+
+The mean `age` of the speakers is 37.6 which is close to the median. The `hedges_per_utt` has a mean hedge use per 1000 utterances of 5.72 which is larger than the median, suggesting that the variable is right-skewed.
+
+Explore the dependent variable `hedges_per_utt`. We will create a histogram and density plot.
+
+```{r sdac-visual-dep, message=FALSE}
+p1 <- 
+  sdac_hedges %>% # dataset
+  ggplot(aes(x = hedges_per_utt)) + # mappings
+  geom_histogram() + # histogram
+  labs(x = "Hedges", y = "Count") # labels
+
+p2 <- 
+  sdac_hedges %>% # dataset
+  ggplot(aes(x = hedges_per_utt)) + # mappings
+  geom_density() + # density plot
+  geom_rug() +  # add rug for individual observations
+  labs(x = "Hedges", y = "Density") # labels
+
+p1 + p2 + plot_annotation("Distribution of hedges per 1000 utterances") # organize plots
+```
+
+The `hedges_per_utt` variable is right-skewed, the mean is greater than the median. 
+
+Since this variable is not discrete (our values are not whole numbers and contain a large range of values) we can try to apply a log-transformation to see if we can bring the distribution more in line with the normal distribution. For this all we need to do is apply the `log()` function to the `hedges_per_utt` variable. We can do this right inside the plotting operation to see how the log transformation affects the distribution.
+
+Log transform the continuous dependent variable and create a density and QQ-plot. 
+
+```{r sdac-visual-dep-log, message=FALSE}
+p1 <- 
+  sdac_hedges %>% # dataset
+  ggplot(aes(x = log(hedges_per_utt))) + # mappings
+  geom_density() + # density plot
+  geom_rug() +  # add rug for individual observations
+  labs(x = "Hedges (log)", y = "Density") # labels
+
+p2 <- 
+  sdac_hedges %>% 
+  ggplot(aes(sample = log(hedges_per_utt))) + # mapping
+  stat_qq() + # calculate expected quantile-quantile distribution
+  stat_qq_line() # plot the qq-line
+
+p1 + p2 + plot_annotation("Log-transformed distriution of hedges per 1000 utterances")
+```
+
+Apply the log transformation to `hedges_per_utt` using the `log()` function with and adding `1` to all the counts to avoid undefined `log(0)` where a speaker did not use any hedges. Since we are adding 1 to all the counts, the distribution remains the same.
+
+```{r sdac-log-transform}
+sdac_hedges_log <- 
+  sdac_hedges %>% 
+  mutate(hedges_per_utt_log = log(hedges_per_utt + 1)) # create log-transformed hedges_per_utt (add 1 to avoid -Inf)
+```
+
+The plots suggest that the log transformation bring the distribution of `hedges_per_utt` much closer to the normal distribution. But let's perform the Shapiro-Wilk test to verify.
+
+```{r sdac-normality-test}
+s1 <- sdac_hedges_log$hedges_per_utt_log %>% shapiro.test() # Shapiro-Wilk test of normality
+s1 # test results summary
+
+s1$p.value < .05 # confirm p-value
+```
+
+The $p$-value is significant suggesting the distribution is non-normal. But as we see from the log-transformed density plot and the QQ-plot is does not wildly diverge from the normal distribution. Nonetheless, if we were performing certain tests this distribution would be treated as non-parametric. 
+
+However, as we will see we will not be working with one of these tests, but rather applying Ordinary Least Squares Regression with the `lm()` function. This test is robust for dependent variables whose values are numeric and span a large range of values (like our `hedges_per_utt` variable which is a ratio). 
+
+Let's now take a look at the relationship between the variables we are going to add to our statistical model. Let's group our summaries by the categorical variable `sex`. 
+
+```{r sdac-grouped-numeric-descriptives}
+sdac_hedges_log %>% 
+  select(-speaker_id) %>% # deselect speaker_id
+  group_by(sex) %>% # grouping parameter
+  num_skim() %>% # get custom data summary
+  yank("numeric") # only show numeric-oriented information
+```
+
+Focusing in on `hedges_per_utt_log`, we can see that there does not seem to be much difference between males (mean 1.29) and females (mean 1.39) in terms of their use of hedges. The distribution also seems quite comparable as the median scores are similar to the means for both levels of `sex`.
+
+Let's visualize these numeric descriptives. We will use a scatterplot as we will be comparing `hedges_per_utt_log`, and `age`. Then we will use the levels of `sex` to color our scatter points and trend lines.
+
+```{r sdac-grouped-visualization, message=FALSE}
+p1 <- 
+  sdac_hedges_log %>% # dataset
+  ggplot(aes(x = age, y = hedges_per_utt_log, color = sex)) + # mappings
+  geom_point(alpha = 1/2) + # points, add alpha for overplotting
+  geom_smooth(method = "lm") + # trend line
+  labs(x = "Age", y = "Hedges per 1000 utterances", color = "Sex") # labels
+
+p1
+```
+
+Looks like hedges decrease as a function of age, regardless of sex. Mai upshot the confidence intervals surrounding the trend lines for men versus women overlaps significantly -therefore the visual inspection suggests that men and women use hedges as similar rates.
+
+
+## Statistical interrogation
+
+We will now conduct an Ordinary Least Squares Regression with the `lm()` function. 
+
+```{r sdac-statistical-test}
+m1 <- lm(hedges_per_utt_log ~ age + sex, data = sdac_hedges_log) # fit the model
+
+summary(m1) # preview model results
+```
+
+The independent variable `age` is the only significant predictor in the model. 
+
+## Evaluation
+
+Let's evaluate the effect size and confidence intervals for this model. We will assess the control variable, only as a *post-hoc* (after the fact) finding.
+
+```{r sdac-evaluation}
+effects <- effectsize(m1) # evaluate effect size and generate a confidence interval
+
+effects # preview effect size and confidence interval
+
+interpret_r(effects$Std_Coefficient[2]) # interpret the effect size
+```
+
+The coefficient for `age` falls within the confidence interval but the interval size is quite large relative to the coefficient size. Furthermore, the interpretation of our coefficient suggests that the effect size is quite small. 
+
+
+## Reporting
+
+To give us some boilerplate information to add to our write-up for this project, let's use the reporter package's `report_text()` on the `m1` model. 
+
+```{r sdac-report-text}
+report_text(m1)
+```
+
+If we would like a summary table of all the results to include in the write-up we can use the `report_table()` function. 
+
+```{r sdac-report-table}
+report_table(m1)
+```
+
+
+# Assessment
+
+...
+
+
+
